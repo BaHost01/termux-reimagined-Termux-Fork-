@@ -41,6 +41,9 @@ public class TerminalExtraKeys implements ExtraKeysView.IExtraKeysView {
                     shiftDown = true;
                 } else if (SpecialButton.FN.getKey().equals(key)) {
                     fnDown = true;
+                } else if ("\\n".equals(key)) {
+                    onTerminalExtraKeyButtonClick(view, "ENTER", ctrlDown, altDown, shiftDown, fnDown);
+                    ctrlDown = false; altDown = false; shiftDown = false; fnDown = false;
                 } else {
                     onTerminalExtraKeyButtonClick(view, key, ctrlDown, altDown, shiftDown, fnDown);
                     ctrlDown = false; altDown = false; shiftDown = false; fnDown = false;

@@ -341,7 +341,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         removeTermuxActivityRootViewGlobalLayoutListener();
 
         unregisterTermuxActivityBroadcastReceiver();
-        getDrawer().closeDrawers();
+        if (getOverlay().getVisibility() == View.VISIBLE)
+            toggleSessionOverlay();
     }
 
     @Override
@@ -498,11 +499,51 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     }
 
     private void setTermuxSessionsListView() {
-        ListView termuxSessionsListView = findViewById(R.id.terminal_sessions_list);
+        ListView termuxSessionsListView = findViewById(R.id.terminal_sessions_list_overlay);
         mTermuxSessionListViewController = new TermuxSessionsListViewController(this, mTermuxService.getTermuxSessions());
         termuxSessionsListView.setAdapter(mTermuxSessionListViewController);
         termuxSessionsListView.setOnItemClickListener(mTermuxSessionListViewController);
         termuxSessionsListView.setOnItemLongClickListener(mTermuxSessionListViewController);
+
+        setupSessionOverlayDrag();
+        findViewById(R.id.close_overlay_button).setOnClickListener(v -> toggleSessionOverlay());
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupSessionOverlayDrag() {
+        View overlay = getOverlay();
+        overlay.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+            @Override
+            public boolean onTouch(View view, android.view.MotionEvent event) {
+                switch (event.getAction()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        dX = view.getX() - event.getRawX();
+                        dY = view.getY() - event.getRawY();
+                        break;
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        view.animate()
+                                .x(event.getRawX() + dX)
+                                .y(event.getRawY() + dY)
+                                .setDuration(0)
+                                .start();
+                        break;
+                    default:
+                        return false;
+                }
+                return true;
+            }
+        });
+    }
+
+    public void toggleSessionOverlay() {
+        View overlay = getOverlay();
+        if (overlay.getVisibility() == View.VISIBLE) {
+            overlay.setVisibility(View.GONE);
+        } else {
+            overlay.setVisibility(View.VISIBLE);
+            overlay.bringToFront();
+        }
     }
 
 
@@ -531,9 +572,11 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         final ViewPager terminalToolbarViewPager = getTerminalToolbarViewPager();
         if (terminalToolbarViewPager == null) return;
 
+        int rowCount = (mTermuxTerminalExtraKeys.getExtraKeysInfo() == null) ? 0 : mTermuxTerminalExtraKeys.getExtraKeysInfo().getMatrix().length;
+        if (rowCount == 0) rowCount = 1;
+
         ViewGroup.LayoutParams layoutParams = terminalToolbarViewPager.getLayoutParams();
-        layoutParams.height = Math.round(mTerminalToolbarDefaultHeight *
-            (mTermuxTerminalExtraKeys.getExtraKeysInfo() == null ? 0 : mTermuxTerminalExtraKeys.getExtraKeysInfo().getMatrix().length) *
+        layoutParams.height = Math.round(mTerminalToolbarDefaultHeight * rowCount *
             mProperties.getTerminalToolbarHeightScaleFactor());
         terminalToolbarViewPager.setLayoutParams(layoutParams);
     }
@@ -564,14 +607,18 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
 
     private void setSettingsButtonView() {
-        ImageButton settingsButton = findViewById(R.id.settings_button);
+        ImageButton settingsButton = findViewById(R.id.settings_button_overlay);
         settingsButton.setOnClickListener(v -> {
             ActivityUtils.startActivity(this, new Intent(this, SettingsActivity.class));
+        });
+        settingsButton.setOnLongClickListener(v -> {
+            ActivityUtils.startActivity(this, new Intent(this, com.termux.app.activities.ControlCenterActivity.class));
+            return true;
         });
     }
 
     private void setNewSessionButtonView() {
-        View newSessionButton = findViewById(R.id.new_session_button);
+        View newSessionButton = findViewById(R.id.new_session_button_overlay);
         newSessionButton.setOnClickListener(v -> mTermuxTerminalSessionActivityClient.addNewSession(false, null));
         newSessionButton.setOnLongClickListener(v -> {
             TextInputDialogUtils.textInput(TermuxActivity.this, R.string.title_create_named_session, null,
@@ -583,12 +630,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     }
 
     private void setToggleKeyboardView() {
-        findViewById(R.id.toggle_keyboard_button).setOnClickListener(v -> {
+        findViewById(R.id.toggle_keyboard_button_overlay).setOnClickListener(v -> {
             mTermuxTerminalViewClient.onToggleSoftKeyboardRequest();
-            getDrawer().closeDrawers();
+            toggleSessionOverlay();
         });
 
-        findViewById(R.id.toggle_keyboard_button).setOnLongClickListener(v -> {
+        findViewById(R.id.toggle_keyboard_button_overlay).setOnLongClickListener(v -> {
             toggleTerminalToolbar();
             return true;
         });
@@ -601,8 +648,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
     @SuppressLint("RtlHardcoded")
     @Override
     public void onBackPressed() {
-        if (getDrawer().isDrawerOpen(Gravity.LEFT)) {
-            getDrawer().closeDrawers();
+        if (getOverlay().getVisibility() == View.VISIBLE) {
+            toggleSessionOverlay();
         } else {
             finishActivityIfNotFinishing();
         }
@@ -833,8 +880,8 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
         mExtraKeysView = extraKeysView;
     }
 
-    public DrawerLayout getDrawer() {
-        return (DrawerLayout) findViewById(R.id.drawer_layout);
+    public View getOverlay() {
+        return findViewById(R.id.session_overlay);
     }
 
 

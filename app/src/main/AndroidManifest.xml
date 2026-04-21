@@ -89,6 +89,18 @@
         </activity-alias>
 
         <activity
+            android:name=".app.activities.ControlCenterActivity"
+            android:exported="false"
+            android:label="Control Center"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
+            android:name=".app.activities.MacroManagerActivity"
+            android:exported="false"
+            android:label="Macro Manager"
+            android:theme="@style/Theme.TermuxApp.DayNight.NoActionBar" />
+
+        <activity
             android:name=".app.activities.HelpActivity"
             android:exported="false"
             android:label="@string/application_name"
