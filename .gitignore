@@ -37,7 +37,8 @@ local.properties
 .swp
 ehthumbs.db
 Thumbs.db
-gemini/
+
+.gemini/
 
 # GitHub App credentials
 gha-creds-*.json
