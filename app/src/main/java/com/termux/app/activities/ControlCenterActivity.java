@@ -27,7 +27,7 @@ public class ControlCenterActivity extends AppCompatActivity {
     private void toggleWakelock() {
         // Logic to toggle wakelock via TermuxService
         Intent intent = new Intent(this, TermuxService.class);
-        intent.setAction(TermuxService.ACTION_WAKE_LOCK);
+        intent.setAction(com.termux.shared.termux.TermuxConstants.TERMUX_SERVICE.ACTION_WAKE_LOCK);
         startService(intent);
     }
 

@@ -1,1 +1,10 @@
+package simple_kernel;
 
+command ls {
+    windows_cmd: "dir";
+    args: ["/B"];
+}
+
+command cat {
+    windows_cmd: "type";
+}
