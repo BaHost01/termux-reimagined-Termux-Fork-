@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'github-releases/**'
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  validate-and-test:
+    name: Validate and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+  build:
+    name: Build APKs (${{ matrix.package_variant }})
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package_variant: [ apt-android-7, apt-android-5 ]
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build and Validate APKs
+        shell: bash {0}
+        env:
+          PACKAGE_VARIANT: ${{ matrix.package_variant }}
+        run: |
+          set -e
+          
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+              GITHUB_SHA="${{ github.event.pull_request.head.sha }}"
+          fi
+
+          # Get version from build.gradle
+          CURRENT_VERSION_NAME="$(grep -m 1 "versionName" ./app/build.gradle | sed 's/.*"\(.*\)".*/\1/')"
+          RELEASE_VERSION_NAME="v$CURRENT_VERSION_NAME+${GITHUB_SHA:0:7}"
+          
+          APK_DIR_PATH="./app/build/outputs/apk/debug"
+          APK_VERSION_TAG="$RELEASE_VERSION_NAME-${{ env.PACKAGE_VARIANT }}-github-debug"
+          APK_BASENAME_PREFIX="termux-app_$APK_VERSION_TAG"
+
+          echo "APK_DIR_PATH=$APK_DIR_PATH" >> $GITHUB_ENV
+          echo "APK_BASENAME_PREFIX=$APK_BASENAME_PREFIX" >> $GITHUB_ENV
+
+          echo "Building APKs for $APK_VERSION_TAG"
+          export TERMUX_APP_VERSION_NAME="${RELEASE_VERSION_NAME/v/}"
+          export TERMUX_APK_VERSION_TAG="$APK_VERSION_TAG"
+          export TERMUX_PACKAGE_VARIANT="${{ env.PACKAGE_VARIANT }}"
+          
+          ./gradlew assembleDebug
+
+          echo "Generating sha256sums"
+          (cd "$APK_DIR_PATH" && sha256sum ${APK_BASENAME_PREFIX}_*.apk > "${APK_BASENAME_PREFIX}_sha256sums")
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ env.APK_BASENAME_PREFIX }}
+          path: |
+            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_*.apk
+            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_sha256sums
+            ${{ env.APK_DIR_PATH }}/output-metadata.json
