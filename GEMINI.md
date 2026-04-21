@@ -25,6 +25,13 @@ This project is the Termux Android application, a terminal emulator and Linux en
 - **Improved Modifier Handling:** Refined `TerminalView` logic for better hardware keyboard support (Ctrl, Alt, Meta).
 - **Control Center:** Quick access to Wakelock, Screen On, Styling, and Macros. Long-press the settings icon in the overlay to launch.
 
+## CLI Tool & NPM Distribution
+
+- **Rust-based Engine:** The `cli/` tool is written in Rust for high-performance Linux-on-Windows command bridging.
+- **NPM Package:** Available as `@lnw/cli`. Install via `npm install -g @lnw/cli`.
+- **Cross-Platform Support:** The npm package includes pre-compiled binaries for Windows, Linux, and macOS.
+- **Auto-Publish:** GitHub Actions automatically build binaries and publish to npm upon creating a new release.
+
 ## Building and Running
 
 The project uses Gradle as its build system.

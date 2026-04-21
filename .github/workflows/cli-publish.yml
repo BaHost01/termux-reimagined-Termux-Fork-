@@ -1,0 +1,56 @@
+name: CLI NPM Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-binaries:
+    uses: ./.github/workflows/cli-ci.yml
+
+  publish:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Create directories
+        run: mkdir -p cli/binaries/win32/x64 cli/binaries/linux/x64 cli/binaries/darwin/x64
+
+      - name: Download Windows Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-pc-windows-msvc
+          path: cli/binaries/win32/x64/
+          
+      - name: Download Linux Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-unknown-linux-gnu
+          path: cli/binaries/linux/x64/
+
+      - name: Download MacOS Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-x86_64-apple-darwin
+          path: cli/binaries/darwin/x64/
+
+      - name: Fix Permissions
+        run: |
+          chmod +x cli/binaries/linux/x64/lnw-cli
+          chmod +x cli/binaries/darwin/x64/lnw-cli
+          chmod +x cli/bin/index.js
+
+      - name: Publish to NPM
+        run: |
+          cd cli
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
